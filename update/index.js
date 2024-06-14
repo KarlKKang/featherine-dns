@@ -115,17 +115,32 @@ async function main() {
     }
 
     /** @type {{Changes: Awaited<ReturnType<typeof toChangeObj>>[]}} */
-    const changeBatch = { Changes: [] };
+    let currentChangeBatch = { Changes: [] };
+    let changeBatches = [currentChangeBatch];
+    let characterCount = 0;
     let promiseResults = await Promise.allSettled(promises);
     for (const result of promiseResults) {
         if (result.status === 'rejected') {
             console.error(result.reason);
-        } else {
-            changeBatch.Changes.push(result.value);
+            continue;
         }
+        const changeObj = result.value;
+        let currentCharacterCount = 0;
+        for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
+            currentCharacterCount += ip.Value.length;
+        }
+        characterCount += currentCharacterCount;
+        if (currentChangeBatch.Changes.length >= 500 || characterCount > 16000) {
+            currentChangeBatch = { Changes: [] };
+            changeBatches.push(currentChangeBatch);
+            characterCount = currentCharacterCount;
+        }
+        currentChangeBatch.Changes.push(result.value);
     }
 
-    await updateDNS(changeBatch);
+    for (const changeBatch of changeBatches) {
+        await updateDNS(changeBatch);
+    }
 }
 
 main()
