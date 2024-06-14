@@ -63,7 +63,7 @@ async function validateLocation(hostname, ip, code) {
  * @param {"A"|"AAAA"} type
  * @param {string[]} ipList
  */
-async function toChangeObj(hostname, type, ipList) {
+function toChangeObj(hostname, type, ipList) {
     return /** @type {const} */ ({
         Action: 'UPSERT',
         ResourceRecordSet: {
@@ -90,7 +90,7 @@ async function getChangeObj(domain, code, type, subnet) {
 }
 
 /**
- * @param {{Changes: Awaited<ReturnType<typeof toChangeObj>>[]}} changeBatch
+ * @param {{Changes: ReturnType<typeof toChangeObj>[]}} changeBatch
  */
 async function updateDNS(changeBatch) {
     const client = new Route53Client({ region: 'us-east-1' });
@@ -114,7 +114,7 @@ async function main() {
         }
     }
 
-    /** @type {{Changes: Awaited<ReturnType<typeof toChangeObj>>[]}} */
+    /** @type {{Changes: ReturnType<typeof toChangeObj>[]}} */
     let currentChangeBatch = { Changes: [] };
     let changeBatches = [currentChangeBatch];
     let characterCount = 0;
