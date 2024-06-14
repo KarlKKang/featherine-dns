@@ -1,0 +1,44 @@
+[
+  {
+    "id": "apac-cn-hong-kong",
+    "location": "\u9999\u6e2f",
+    "country": "\u4e2d\u56fd",
+    "subnet": "183.179.199.0/24",
+    "code": "HKG"
+  },
+  {
+    "id": "apac-jp-osaka",
+    "location": "\u5927\u962a",
+    "country": "\u65e5\u672c",
+    "subnet": "210.160.8.0/24",
+    "code": "KIX"
+  },
+  {
+    "id": "apac-jp-tokyo-2",
+    "location": "\u6771\u4eac",
+    "country": "\u65e5\u672c",
+    "subnet": "210.160.194.0/24",
+    "code": "NRT"
+  },
+  {
+    "id": "apac-kr-seoul-2",
+    "location": "\u30bd\u30a6\u30eb",
+    "country": "\u97d3\u56fd",
+    "subnet": "121.129.4.0/24",
+    "code": "ICN"
+  },
+  {
+    "id": "apac-tw-taoyuan",
+    "location": "\u6843\u5712",
+    "country": "\u53f0\u6e7e",
+    "subnet": "60.250.79.0/24",
+    "code": "TPE"
+  },
+  {
+    "id": "apac-vn-hanoi",
+    "location": "\u30cf\u30ce\u30a4",
+    "country": "\u30d9\u30c8\u30ca\u30e0",
+    "subnet": "123.31.42.0/24",
+    "code": "HAN"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "name": "featherine-dns",
+  "version": "1.0.0",
+  "description": "Manage alternate domain names for featherine.com",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KarlKKang/featherine-dns.git"
+  },
+  "author": "Kai Kang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KarlKKang/featherine-dns/issues"
+  },
+  "homepage": "https://github.com/KarlKKang/featherine-dns",
+  "dependencies": {
+    "@aws-sdk/client-route-53": "^3.596.0",
+    "ipaddr.js": "^2.2.0"
+  }
+}
