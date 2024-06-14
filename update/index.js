@@ -21,25 +21,29 @@ const promiseExec = promisify(exec);
 
 /**
  * @param {string} hostname
- * @param {"A"|"AAAA"} type
  * @param {string} subnet
  */
-async function dnsLookup(hostname, type, subnet) {
-    const { stdout } = await promiseExec(`dig @8.8.8.8 ${hostname} ${type} +short +subnet=${subnet}`);
-    const result = [];
+async function dnsLookup(hostname, subnet) {
+    const { stdout } = await promiseExec(`dig @8.8.8.8 ${hostname} A +subnet=${subnet} ${hostname} AAAA +subnet=${subnet} +short`);
+    const ipv4Results = [];
+    const ipv6Results = [];
     const lines = stdout.split('\n');
     for (const line of lines) {
         try {
-            ipaddr.parse(line);
+            const parseResult = ipaddr.parse(line);
+            if (parseResult.kind() === 'ipv4') {
+                ipv4Results.push(line);
+            } else {
+                ipv6Results.push(line);
+            }
         } catch (e) {
             continue;
         }
-        result.push(line);
     }
-    if (result.length === 0) {
-        throw new Error(`No IP addresses found for ${hostname}`);
+    if (ipv4Results.length === 0 || ipv6Results.length === 0) {
+        throw new Error(`No IPv4 or IPv6 addresses found for ${hostname}`);
     }
-    return result;
+    return [ipv4Results, ipv6Results];
 }
 
 /**
@@ -78,15 +82,12 @@ function toChangeObj(hostname, type, ipList) {
 /**
  * @param {string} domain
  * @param {string} code
- * @param {"A"|"AAAA"} type
  * @param {string} subnet
  */
-async function getChangeObj(domain, code, type, subnet) {
-    const ipList = await dnsLookup(domain, type, subnet);
-    if (type === 'A') {
-        await validateLocation(domain, ipList[0], code);
-    }
-    return toChangeObj(code + '.' + domain, type, ipList);
+async function getChangeObj(domain, code, subnet) {
+    const [ipv4Results, ipv6Results] = await dnsLookup(domain, subnet);
+    await validateLocation(domain, ipv4Results[0], code);
+    return [toChangeObj(code + '.' + domain, 'A', ipv4Results), toChangeObj(code + '.' + domain, 'AAAA', ipv6Results)];
 }
 
 /**
@@ -109,8 +110,7 @@ async function main() {
     const promises = [];
     for (const domain of DOMAINS) {
         for (const pop of pops) {
-            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'A', pop.subnet));
-            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'AAAA', pop.subnet));
+            promises.push(getChangeObj(domain, pop.code.toLowerCase(), pop.subnet));
         }
     }
 
@@ -124,18 +124,20 @@ async function main() {
             console.error(result.reason);
             continue;
         }
-        const changeObj = result.value;
-        let currentCharacterCount = 0;
-        for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
-            currentCharacterCount += ip.Value.length;
+        const changeObjs = result.value;
+        for (const changeObj of changeObjs) {
+            let currentCharacterCount = 0;
+            for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
+                currentCharacterCount += ip.Value.length;
+            }
+            characterCount += currentCharacterCount;
+            if (currentChangeBatch.Changes.length >= 500 || characterCount > 16000) {
+                currentChangeBatch = { Changes: [] };
+                changeBatches.push(currentChangeBatch);
+                characterCount = currentCharacterCount;
+            }
+            currentChangeBatch.Changes.push(changeObj);
         }
-        characterCount += currentCharacterCount;
-        if (currentChangeBatch.Changes.length >= 500 || characterCount > 16000) {
-            currentChangeBatch = { Changes: [] };
-            changeBatches.push(currentChangeBatch);
-            characterCount = currentCharacterCount;
-        }
-        currentChangeBatch.Changes.push(result.value);
     }
 
     for (const changeBatch of changeBatches) {
