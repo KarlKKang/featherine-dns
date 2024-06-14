@@ -93,7 +93,7 @@ async function getChangeObj(domain, code, type, subnet) {
  * @param {{Changes: Awaited<ReturnType<typeof toChangeObj>>[]}} changeBatch
  */
 async function updateDNS(changeBatch) {
-    const client = new Route53Client();
+    const client = new Route53Client({ region: 'us-east-1' });
     const command = new ChangeResourceRecordSetsCommand({
         ChangeBatch: changeBatch,
         HostedZoneId: HOST_ZONE_ID
