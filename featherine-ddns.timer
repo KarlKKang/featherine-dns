@@ -1,0 +1,10 @@
+[Unit]
+Description="Run featherine.com DNS update service every minute"
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1us
+Unit=featherine-ddns.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,7 @@
+[Unit]
+Description="featherine.com DNS update service"
+
+[Service]
+Type=oneshot
+Environment="HOST_ZONE_ID="
+ExecStart=/usr/bin/python3 /home/ec2-user/over-the-wall/ddns/script.py
