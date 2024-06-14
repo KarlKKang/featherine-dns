@@ -43,23 +43,19 @@ async function dnsLookup(hostname, subnet) {
     if (ipv4Results.length === 0 || ipv6Results.length === 0) {
         throw new Error(`No IPv4 or IPv6 addresses found for ${hostname}`);
     }
-    return [ipv4Results, ipv6Results];
+    return /** @type {const} */ ([ipv4Results, ipv6Results]);
 }
 
 /**
- * @param {string} hostname
  * @param {string} ip
- * @param {string} code
  */
-async function validateLocation(hostname, ip, code) {
+async function reverseDNS(ip) {
     const { stdout } = await promiseExec(`dig -x ${ip} +short`);
     const reverseHostname = stdout.split('\n')[0];
     if (!reverseHostname) {
         throw new Error(`No hostname found for IP ${ip}`);
     }
-    if (!reverseHostname.startsWith('server-' + ip.replaceAll('.', '-') + '.' + code.toLowerCase())) {
-        console.warn(`Location mismatch for ${hostname} in ${code}: ${reverseHostname}`);
-    }
+    return reverseHostname;
 }
 
 /**
@@ -85,9 +81,22 @@ function toChangeObj(hostname, type, ipList) {
  * @param {string} subnet
  */
 async function getChangeObj(domain, code, subnet) {
-    const [ipv4Results, ipv6Results] = await dnsLookup(domain, subnet);
-    await validateLocation(domain, ipv4Results[0], code);
-    return [toChangeObj(code + '.' + domain, 'A', ipv4Results), toChangeObj(code + '.' + domain, 'AAAA', ipv6Results)];
+    /** @type {Awaited<ReturnType<dnsLookup>>} */
+    let ipResults;
+    let retryCount = 0;
+    while (true) {
+        ipResults = await dnsLookup(domain, subnet);
+        const testIp = ipResults[0][0];
+        const reverseHostname = await reverseDNS(testIp);
+        if (reverseHostname.startsWith('server-' + testIp.replaceAll('.', '-') + '.' + code)) {
+            break;
+        }
+        if (retryCount++ >= 5) {
+            console.warn(`Location mismatch for ${domain} in ${code}: ${reverseHostname}`);
+            break;
+        }
+    }
+    return [toChangeObj(code + '.' + domain, 'A', ipResults[0]), toChangeObj(code + '.' + domain, 'AAAA', ipResults[1])];
 }
 
 /**
