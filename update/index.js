@@ -142,7 +142,7 @@ async function main() {
             }
             characterCount += currentCharacterCount;
             recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
-            if (currentChangeBatch.Changes.length >= 500 || characterCount > 16000) {
+            if (recordCount > 500 || characterCount > 16000) {
                 currentChangeBatch = { Changes: [] };
                 changeBatches.push(currentChangeBatch);
                 characterCount = currentCharacterCount;
