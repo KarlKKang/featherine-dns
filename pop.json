@@ -42,6 +42,20 @@
     "code": "ICN"
   },
   {
+    "id": "apac-ph-manila",
+    "location": "\u30de\u30f3\u30ea\u30a2",
+    "country": "\u30d5\u30a3\u30ea\u30d4\u30f3",
+    "subnet": "108.158.213.0/24",
+    "code": "MNL"
+  },
+  {
+    "id": "apac-th-bangkok",
+    "location": "\u30d0\u30f3\u30b3\u30af",
+    "country": "\u30bf\u30a4",
+    "subnet": "119.46.176.0/24",
+    "code": "BKK"
+  },
+  {
     "id": "apac-tw-taoyuan",
     "location": "\u6843\u5712",
     "country": "\u53f0\u6e7e",
