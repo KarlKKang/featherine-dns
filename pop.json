@@ -14,6 +14,13 @@
     "code": "DEL"
   },
   {
+    "id": "apac-in-hyderabad-2",
+    "location": "\u30cf\u30a4\u30c7\u30e9\u30d0\u30fc\u30c9",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "167.219.48.0/24",
+    "code": "HYD"
+  },
+  {
     "id": "apac-in-kolkata-2",
     "location": "\u30b3\u30eb\u30ab\u30bf",
     "country": "\u30a4\u30f3\u30c9",
@@ -42,11 +49,25 @@
     "code": "ICN"
   },
   {
+    "id": "apac-my-kuala-lumpur",
+    "location": "\u30af\u30a2\u30e9\u30eb\u30f3\u30d7\u30fc\u30eb",
+    "country": "\u30de\u30ec\u30fc\u30b7\u30a2",
+    "subnet": "103.245.88.0/24",
+    "code": "KUL"
+  },
+  {
     "id": "apac-ph-manila",
     "location": "\u30de\u30f3\u30ea\u30a2",
     "country": "\u30d5\u30a3\u30ea\u30d4\u30f3",
     "subnet": "112.199.112.0/24",
     "code": "MNL"
+  },
+  {
+    "id": "apac-sg-singapore",
+    "location": "\u30b7\u30f3\u30ac\u30dd\u30fc\u30eb",
+    "country": "\u30b7\u30f3\u30ac\u30dd\u30fc\u30eb",
+    "subnet": "119.81.71.0/24",
+    "code": "SIN"
   },
   {
     "id": "apac-th-bangkok",
