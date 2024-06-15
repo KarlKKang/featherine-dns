@@ -183,7 +183,18 @@ async function main() {
     }
 
     for (const changeBatch of changeBatches) {
-        await updateDNS(changeBatch);
+        let retryCount = 0;
+        while(true) {
+            try {
+                await updateDNS(changeBatch);
+                break;
+            } catch (e) {
+                if (retryCount++ >= 3) {
+                    console.error(e);
+                    break;
+                }
+            }
+        }
     }
 }
 
