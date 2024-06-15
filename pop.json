@@ -7,6 +7,20 @@
     "code": "HKG"
   },
   {
+    "id": "apac-in-delhi-2",
+    "location": "\u30c7\u30ea\u30fc",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "125.21.240.0/24",
+    "code": "DEL"
+  },
+  {
+    "id": "apac-in-kolkata-2",
+    "location": "\u30b3\u30eb\u30ab\u30bf",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "223.29.205.0/24",
+    "code": "CCU"
+  },
+  {
     "id": "apac-jp-osaka",
     "location": "\u5927\u962a",
     "country": "\u65e5\u672c",
