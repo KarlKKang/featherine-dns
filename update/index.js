@@ -47,12 +47,11 @@ async function dnsLookup(hostname, type, subnet) {
  * @param {string} ip
  */
 async function reverseDNS(ip) {
-    const { stdout } = await promiseExec(`dig -x ${ip} +short`);
-    const reverseHostname = stdout.split('\n')[0];
-    if (!reverseHostname) {
-        throw new Error(`No hostname found for IP ${ip}`);
+    try {
+        return (await promiseExec(`dig -x ${ip} +short`)).stdout.split('\n')[0];
+    } catch (e) {
+        return '';
     }
-    return reverseHostname;
 }
 
 /**
