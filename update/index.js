@@ -47,20 +47,9 @@ async function dnsLookup(hostname, type, subnet) {
 
 /**
  * @param {string} ip
- */
-async function reverseDNS(ip) {
-    try {
-        return (await promiseExec(`dig -x ${ip} +short`)).stdout.split('\n')[0];
-    } catch (e) {
-        return '';
-    }
-}
-
-/**
- * @param {string} ip
  * @returns {Promise<string>}
  */
-async function ipv6Location(ip) {
+async function ipLocation(ip) {
     return new Promise((resolve) => {
         const req = http.request({
             hostname: ip,
@@ -118,20 +107,9 @@ async function getChangeObj(domain, code, type, subnet) {
                 }
             }
         }
-        const testIp = ipResults[0];
-        /** @type {string} */
-        let location;
-        if (type === 'A') {
-            const reverseHostname = await reverseDNS(testIp);
-            if (reverseHostname.startsWith('server-' + testIp.replaceAll('.', '-') + '.' + code)) {
-                break;
-            }
-            location = reverseHostname;
-        } else {
-            location = await ipv6Location(testIp);
-            if (location.toLowerCase().startsWith(code)) {
-                break;
-            }
+        const location = await ipLocation(ipResults[0]);
+        if (location.toLowerCase().startsWith(code)) {
+            break;
         }
         if (retryCount++ >= 5) {
             console.warn(`Location mismatch for ${domain} in ${code}: ${location}`);
