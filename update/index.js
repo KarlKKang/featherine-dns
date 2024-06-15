@@ -143,9 +143,9 @@ async function getChangeObj(domain, code, type, subnet) {
 
 /**
  * @param {{Changes: ReturnType<typeof toChangeObj>[]}} changeBatch
+ * @param {Route53Client} client
  */
-async function updateDNS(changeBatch) {
-    const client = new Route53Client({ region: 'us-east-1' });
+async function updateDNS(changeBatch, client) {
     const command = new ChangeResourceRecordSetsCommand({
         ChangeBatch: changeBatch,
         HostedZoneId: HOST_ZONE_ID
@@ -215,11 +215,12 @@ async function main() {
         currentChangeBatch.Changes.push(changeObj);
     }
 
+    const client = new Route53Client({ region: 'us-east-1' });
     for (const changeBatch of changeBatches) {
         let retryCount = 0;
         while (true) {
             try {
-                await updateDNS(changeBatch);
+                await updateDNS(changeBatch, client);
                 break;
             } catch (e) {
                 if (retryCount++ >= 3) {
