@@ -7,6 +7,27 @@
     "code": "HKG"
   },
   {
+    "id": "apac-id-jakarta",
+    "location": "\u30b8\u30e3\u30ab\u30eb\u30bf",
+    "country": "\u30a4\u30f3\u30c9\u30cd\u30b7\u30a2",
+    "subnet": "101.255.120.0/24",
+    "code": "CGK"
+  },
+  {
+    "id": "apac-in-bangalore",
+    "location": "\u30d9\u30f3\u30ac\u30eb\u30fc\u30eb",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "103.14.198.0/24",
+    "code": "BLR"
+  },
+  {
+    "id": "apac-in-chennai-2",
+    "location": "\u30c1\u30a7\u30f3\u30ca\u30a4",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "121.243.33.0/24",
+    "code": "MAA"
+  },
+  {
     "id": "apac-in-delhi-2",
     "location": "\u30c7\u30ea\u30fc",
     "country": "\u30a4\u30f3\u30c9",
@@ -26,6 +47,20 @@
     "country": "\u30a4\u30f3\u30c9",
     "subnet": "223.29.205.0/24",
     "code": "CCU"
+  },
+  {
+    "id": "apac-in-mumbai-2",
+    "location": "\u30e0\u30f3\u30d0\u30a4",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "115.114.59.0/24",
+    "code": "BOM"
+  },
+  {
+    "id": "apac-in-pune-2",
+    "location": "\u30d7\u30cd\u30fc",
+    "country": "\u30a4\u30f3\u30c9",
+    "subnet": "18.161.125.0/24",
+    "code": "PNQ"
   },
   {
     "id": "apac-jp-osaka",
