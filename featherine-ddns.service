@@ -4,4 +4,6 @@ Description="featherine.com DNS update service"
 [Service]
 Type=oneshot
 Environment="HOST_ZONE_ID="
+Environment="THREAD="
+Environment="THREAD_COUNT="
 ExecStart=/usr/bin/node-20 /home/ec2-user/featherine-dns/update/index.js
