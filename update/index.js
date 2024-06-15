@@ -118,7 +118,7 @@ async function getChangeObj(domain, code, type, subnet) {
             location = reverseHostname;
         } else {
             location = await ipv6Location(testIp);
-            if (location.startsWith(code)) {
+            if (location.toLowerCase().startsWith(code)) {
                 break;
             }
         }
@@ -150,8 +150,9 @@ async function main() {
     const promises = [];
     for (const domain of DOMAINS) {
         for (const pop of pops) {
-            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'A', pop.subnet));
-            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'AAAA', pop.subnet));
+            const code = pop.code.toLowerCase();
+            promises.push(getChangeObj(domain, code, 'A', pop.subnet));
+            promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet));
         }
     }
 
