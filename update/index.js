@@ -127,6 +127,7 @@ async function main() {
     let currentChangeBatch = { Changes: [] };
     let changeBatches = [currentChangeBatch];
     let characterCount = 0;
+    let recordCount = 0;
     let promiseResults = await Promise.allSettled(promises);
     for (const result of promiseResults) {
         if (result.status === 'rejected') {
@@ -140,10 +141,12 @@ async function main() {
                 currentCharacterCount += ip.Value.length;
             }
             characterCount += currentCharacterCount;
+            recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
             if (currentChangeBatch.Changes.length >= 500 || characterCount > 16000) {
                 currentChangeBatch = { Changes: [] };
                 changeBatches.push(currentChangeBatch);
                 characterCount = currentCharacterCount;
+                recordCount = changeObj.ResourceRecordSet.ResourceRecords.length;
             }
             currentChangeBatch.Changes.push(changeObj);
         }
