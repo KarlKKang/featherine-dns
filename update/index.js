@@ -1,10 +1,7 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import ipaddr from 'ipaddr.js';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ChangeResourceRecordSetsCommand, Route53Client } from '@aws-sdk/client-route-53';
+import { TestDNSAnswerCommand, ChangeResourceRecordSetsCommand, Route53Client } from '@aws-sdk/client-route-53';
 import http from 'node:http';
 
 const DOMAINS = [
@@ -20,26 +17,33 @@ const THREAD = process.env.THREAD;
 const THREAD_COUNT = process.env.THREAD_COUNT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const promiseExecFile = promisify(execFile);
 
 /**
+ * @param {Route53Client} client
  * @param {string} hostname
  * @param {'A'|'AAAA'} type
  * @param {string} subnet
  */
-async function dnsLookup(hostname, type, subnet) {
-    const { stdout } = await promiseExecFile('dig', ['@8.8.8.8', hostname, type, '+subnet=' + subnet, '+short']);
-    const results = [];
-    const lines = stdout.split('\n');
-    for (const line of lines) {
-        try {
-            ipaddr.parse(line);
-        } catch (e) {
-            continue;
-        }
-        results.push(line);
+async function dnsLookup(client, hostname, type, subnet) {
+    const subnetSplit = subnet.split('/');
+    const subnetIp = subnetSplit[0];
+    let subnetMask = subnetSplit[1];
+    if (subnetMask === undefined) {
+        subnetMask = '24';
     }
-    if (results.length === 0) {
+    const command = new TestDNSAnswerCommand({
+        HostedZoneId: HOST_ZONE_ID,
+        RecordName: hostname,
+        RecordType: type,
+        EDNS0ClientSubnetIP: subnetIp,
+        EDNS0ClientSubnetMask: subnetMask
+    });
+    const response = await client.send(command);
+    if (response.ResponseCode !== 'NOERROR') {
+        throw new Error(`DNS lookup failed for ${hostname}: ${response.ResponseCode}`);
+    }
+    const results = response.RecordData;
+    if (results === undefined || results.length === 0) {
         throw new Error(`No ${type} records found for ${hostname}`);
     }
     return results;
@@ -86,12 +90,13 @@ function toChangeObj(hostname, type, ipList) {
 }
 
 /**
+ * @param {Route53Client} client
  * @param {string} domain
  * @param {string} code
  * @param {'A'|'AAAA'} type
  * @param {string} subnet
  */
-async function getChangeObj(domain, code, type, subnet) {
+async function getChangeObj(client, domain, code, type, subnet) {
     /** @type {Awaited<ReturnType<dnsLookup>>} */
     let ipResults;
     let retryCount = 0;
@@ -99,7 +104,7 @@ async function getChangeObj(domain, code, type, subnet) {
         let dnsLookupRetryCount = 0;
         while (true) {
             try {
-                ipResults = await dnsLookup(domain, type, subnet);
+                ipResults = await dnsLookup(client, domain, type, subnet);
                 break;
             } catch (e) {
                 if (dnsLookupRetryCount++ >= 3) {
@@ -120,10 +125,10 @@ async function getChangeObj(domain, code, type, subnet) {
 }
 
 /**
- * @param {{Changes: ReturnType<typeof toChangeObj>[]}} changeBatch
  * @param {Route53Client} client
+ * @param {{Changes: ReturnType<typeof toChangeObj>[]}} changeBatch
  */
-async function updateDNS(changeBatch, client) {
+async function updateDNS(client, changeBatch) {
     const command = new ChangeResourceRecordSetsCommand({
         ChangeBatch: changeBatch,
         HostedZoneId: HOST_ZONE_ID
@@ -155,14 +160,15 @@ async function main() {
 
     const domainLength = DOMAINS.length;
     const domainSlice = DOMAINS.slice(Math.floor((thread - 1) / threadCount * domainLength), Math.floor(thread / threadCount * domainLength));
+    const client = new Route53Client({ region: 'us-west-2' });
 
     /** @type {ReturnType<typeof getChangeObj>[]} */
     const promises = [];
     for (const domain of domainSlice) {
         for (const pop of pops) {
             const code = pop.code.toLowerCase();
-            promises.push(getChangeObj(domain, code, 'A', pop.subnet));
-            promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet));
+            promises.push(getChangeObj(client, domain, code, 'A', pop.subnet));
+            promises.push(getChangeObj(client, domain, code, 'AAAA', pop.subnet));
         }
     }
 
@@ -193,12 +199,11 @@ async function main() {
         currentChangeBatch.Changes.push(changeObj);
     }
 
-    const client = new Route53Client({ region: 'us-east-1' });
     for (const changeBatch of changeBatches) {
         let retryCount = 0;
         while (true) {
             try {
-                await updateDNS(changeBatch, client);
+                await updateDNS(client, changeBatch);
                 break;
             } catch (e) {
                 if (retryCount++ >= 3) {
