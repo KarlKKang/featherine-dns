@@ -5,6 +5,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { ChangeResourceRecordSetsCommand, Route53Client } from '@aws-sdk/client-route-53';
+import http from 'node:http';
 
 const DOMAINS = [
     'featherine.com',
@@ -21,29 +22,25 @@ const promiseExec = promisify(exec);
 
 /**
  * @param {string} hostname
+ * @param {'A'|'AAAA'} type
  * @param {string} subnet
  */
-async function dnsLookup(hostname, subnet) {
-    const { stdout } = await promiseExec(`dig @8.8.8.8 ${hostname} A +subnet=${subnet} ${hostname} AAAA +subnet=${subnet} +short`);
-    const ipv4Results = [];
-    const ipv6Results = [];
+async function dnsLookup(hostname, type, subnet) {
+    const { stdout } = await promiseExec(`dig @8.8.8.8 ${hostname} ${type} +subnet=${subnet} +short`);
+    const results = [];
     const lines = stdout.split('\n');
     for (const line of lines) {
         try {
-            const parseResult = ipaddr.parse(line);
-            if (parseResult.kind() === 'ipv4') {
-                ipv4Results.push(line);
-            } else {
-                ipv6Results.push(line);
-            }
+            ipaddr.parse(line);
         } catch (e) {
             continue;
         }
+        results.push(line);
     }
-    if (ipv4Results.length === 0 || ipv6Results.length === 0) {
-        throw new Error(`No IPv4 or IPv6 addresses found for ${hostname}`);
+    if (results.length === 0) {
+        throw new Error(`No ${type} records found for ${hostname}`);
     }
-    return /** @type {const} */ ([ipv4Results, ipv6Results]);
+    return results;
 }
 
 /**
@@ -56,6 +53,29 @@ async function reverseDNS(ip) {
         throw new Error(`No hostname found for IP ${ip}`);
     }
     return reverseHostname;
+}
+
+/**
+ * @param {string} ip
+ * @returns {Promise<string>}
+ */
+async function ipv6Location(ip) {
+    return new Promise((resolve) => {
+        const req = http.request({
+            hostname: ip,
+            method: 'HEAD',
+        }, (res) => {
+            const location = res.headers['x-amz-cf-pop'];
+            if (location === undefined || Array.isArray(location)) {
+                resolve('');
+            } else {
+                resolve(location);
+            }
+            res.resume();
+        });
+        req.on('error', () => resolve(''));
+        req.end();
+    });
 }
 
 /**
@@ -78,25 +98,36 @@ function toChangeObj(hostname, type, ipList) {
 /**
  * @param {string} domain
  * @param {string} code
+ * @param {'A'|'AAAA'} type
  * @param {string} subnet
  */
-async function getChangeObj(domain, code, subnet) {
+async function getChangeObj(domain, code, type, subnet) {
     /** @type {Awaited<ReturnType<dnsLookup>>} */
     let ipResults;
     let retryCount = 0;
     while (true) {
-        ipResults = await dnsLookup(domain, subnet);
-        const testIp = ipResults[0][0];
-        const reverseHostname = await reverseDNS(testIp);
-        if (reverseHostname.startsWith('server-' + testIp.replaceAll('.', '-') + '.' + code)) {
-            break;
+        ipResults = await dnsLookup(domain, type, subnet);
+        const testIp = ipResults[0];
+        /** @type {string} */
+        let location;
+        if (type === 'A') {
+            const reverseHostname = await reverseDNS(testIp);
+            if (reverseHostname.startsWith('server-' + testIp.replaceAll('.', '-') + '.' + code)) {
+                break;
+            }
+            location = reverseHostname;
+        } else {
+            location = await ipv6Location(testIp);
+            if (location.startsWith(code)) {
+                break;
+            }
         }
         if (retryCount++ >= 5) {
-            console.warn(`Location mismatch for ${domain} in ${code}: ${reverseHostname}`);
+            console.warn(`Location mismatch for ${domain} in ${code}: ${location}`);
             break;
         }
     }
-    return [toChangeObj(code + '.' + domain, 'A', ipResults[0]), toChangeObj(code + '.' + domain, 'AAAA', ipResults[1])];
+    return toChangeObj(code + '.' + domain, type, ipResults);
 }
 
 /**
@@ -119,7 +150,8 @@ async function main() {
     const promises = [];
     for (const domain of DOMAINS) {
         for (const pop of pops) {
-            promises.push(getChangeObj(domain, pop.code.toLowerCase(), pop.subnet));
+            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'A', pop.subnet));
+            promises.push(getChangeObj(domain, pop.code.toLowerCase(), 'AAAA', pop.subnet));
         }
     }
 
@@ -134,22 +166,20 @@ async function main() {
             console.error(result.reason);
             continue;
         }
-        const changeObjs = result.value;
-        for (const changeObj of changeObjs) {
-            let currentCharacterCount = 0;
-            for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
-                currentCharacterCount += ip.Value.length;
-            }
-            characterCount += currentCharacterCount;
-            recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
-            if (recordCount > 500 || characterCount > 16000) {
-                currentChangeBatch = { Changes: [] };
-                changeBatches.push(currentChangeBatch);
-                characterCount = currentCharacterCount;
-                recordCount = changeObj.ResourceRecordSet.ResourceRecords.length;
-            }
-            currentChangeBatch.Changes.push(changeObj);
+        const changeObj = result.value;
+        let currentCharacterCount = 0;
+        for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
+            currentCharacterCount += ip.Value.length;
         }
+        characterCount += currentCharacterCount;
+        recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
+        if (recordCount > 500 || characterCount > 16000) {
+            currentChangeBatch = { Changes: [] };
+            changeBatches.push(currentChangeBatch);
+            characterCount = currentCharacterCount;
+            recordCount = changeObj.ResourceRecordSet.ResourceRecords.length;
+        }
+        currentChangeBatch.Changes.push(changeObj);
     }
 
     for (const changeBatch of changeBatches) {
