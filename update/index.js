@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import ipaddr from 'ipaddr.js';
 import { readFileSync } from 'fs';
@@ -20,7 +20,7 @@ const THREAD = process.env.THREAD;
 const THREAD_COUNT = process.env.THREAD_COUNT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const promiseExec = promisify(exec);
+const promiseExecFile = promisify(execFile);
 
 /**
  * @param {string} hostname
@@ -28,7 +28,7 @@ const promiseExec = promisify(exec);
  * @param {string} subnet
  */
 async function dnsLookup(hostname, type, subnet) {
-    const { stdout } = await promiseExec(`dig @8.8.8.8 ${hostname} ${type} +subnet=${subnet} +short`);
+    const { stdout } = await promiseExecFile('dig', ['@8.8.8.8', hostname, type, '+subnet=' + subnet, '+short']);
     const results = [];
     const lines = stdout.split('\n');
     for (const line of lines) {
