@@ -194,7 +194,7 @@ async function main() {
 
     for (const changeBatch of changeBatches) {
         let retryCount = 0;
-        while(true) {
+        while (true) {
             try {
                 await updateDNS(changeBatch);
                 break;
