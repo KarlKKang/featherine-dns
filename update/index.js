@@ -105,7 +105,17 @@ async function getChangeObj(domain, code, type, subnet) {
     let ipResults;
     let retryCount = 0;
     while (true) {
-        ipResults = await dnsLookup(domain, type, subnet);
+        let dnsLookupRetryCount = 0;
+        while (true) {
+            try {
+                ipResults = await dnsLookup(domain, type, subnet);
+                break;
+            } catch (e) {
+                if (dnsLookupRetryCount++ >= 3) {
+                    throw e;
+                }
+            }
+        }
         const testIp = ipResults[0];
         /** @type {string} */
         let location;
