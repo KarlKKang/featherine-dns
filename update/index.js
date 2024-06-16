@@ -193,7 +193,7 @@ async function main() {
         currentChangeBatch.Changes.push(changeObj);
     }
 
-    const client = new Route53Client({ region: 'us-east-1' });
+    const client = new Route53Client({ region: 'us-west-2' });
     for (const changeBatch of changeBatches) {
         let retryCount = 0;
         while (true) {
