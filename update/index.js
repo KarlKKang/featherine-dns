@@ -17,9 +17,13 @@ const DOMAINS = [
     'cdn.alpha.featherine.com',
 ];
 const HOST_ZONE_ID = process.env.HOST_ZONE_ID;
+if (HOST_ZONE_ID === undefined) {
+    throw new Error('HOST_ZONE_ID is not defined');
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const promiseExecFile = promisify(execFile);
+const route53Client = new Route53Client({ region: 'us-west-2' });
 
 /**
  * @typedef {{time: number, next: Route53ApiRequestListNode|null}} Route53ApiRequestListNode
@@ -126,9 +130,8 @@ async function getChangeObj(domain, code, type, subnet) {
 
 /**
  * @param {{Changes: ReturnType<typeof toChangeObj>[]}} changeBatch
- * @param {Route53Client} client
  */
-async function updateDNS(changeBatch, client) {
+async function updateDNS(changeBatch) {
     const command = new ChangeResourceRecordSetsCommand({
         ChangeBatch: changeBatch,
         HostedZoneId: HOST_ZONE_ID
@@ -163,7 +166,7 @@ async function updateDNS(changeBatch, client) {
     }
 
     try {
-        await client.send(command);
+        await route53Client.send(command);
     } finally {
         const newRequestNode = { time: performance.now(), next: route53ApiRequestListHead };
         route53ApiRequestListHead = newRequestNode;
@@ -171,13 +174,12 @@ async function updateDNS(changeBatch, client) {
 }
 
 async function main() {
-    if (HOST_ZONE_ID === undefined) {
-        throw new Error('HOST_ZONE_ID is not defined');
-    }
+    const startTime = performance.now();
+    console.log('Starting DNS update');
 
+    route53ApiRequestListHead = null;
     /** @type {{id: string, location: string, country: string, subnet: string, code: string}[]} */
     const pops = JSON.parse(readFileSync(path.join(__dirname, '..', 'pop.json'), 'utf8'));
-    const client = new Route53Client({ region: 'us-west-2' });
 
     for (const pop of pops) {
         /** @type {ReturnType<typeof getChangeObj>[]} */
@@ -219,7 +221,7 @@ async function main() {
             let retryCount = 0;
             while (true) {
                 try {
-                    await updateDNS(changeBatch, client);
+                    await updateDNS(changeBatch);
                     break;
                 } catch (e) {
                     if (retryCount++ >= 3) {
@@ -230,6 +232,8 @@ async function main() {
             }
         }
     }
+
+    console.log(`DNS update completed in ${Math.round(performance.now() - startTime) / 1000}s`);
 }
 
-main()
+setInterval(main, 60000);

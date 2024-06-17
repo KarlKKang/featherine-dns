@@ -1,7 +1,11 @@
 [Unit]
 Description="featherine.com DNS update service"
+After=network-online.target nss-lookup.target
+Wants=network-online.target
 
 [Service]
-Type=oneshot
 Environment="HOST_ZONE_ID="
 ExecStart=/usr/bin/node-20 /home/ec2-user/featherine-dns/update/index.js
+
+[Install]
+WantedBy=multi-user.target
