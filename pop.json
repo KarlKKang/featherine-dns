@@ -10,7 +10,7 @@
     "id": "apac-id-jakarta",
     "location": "\u30b8\u30e3\u30ab\u30eb\u30bf",
     "country": "\u30a4\u30f3\u30c9\u30cd\u30b7\u30a2",
-    "subnet": "101.255.120.0/24",
+    "subnet": "101.128.64.0/24",
     "code": "CGK"
   },
   {
