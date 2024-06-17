@@ -17,8 +17,6 @@ const DOMAINS = [
     'cdn.alpha.featherine.com',
 ];
 const HOST_ZONE_ID = process.env.HOST_ZONE_ID;
-const THREAD = process.env.THREAD;
-const THREAD_COUNT = process.env.THREAD_COUNT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const promiseExecFile = promisify(execFile);
@@ -176,32 +174,15 @@ async function main() {
     if (HOST_ZONE_ID === undefined) {
         throw new Error('HOST_ZONE_ID is not defined');
     }
-    if (THREAD === undefined) {
-        throw new Error('THREAD is not defined');
-    }
-    if (THREAD_COUNT === undefined) {
-        throw new Error('THREAD_COUNT is not defined');
-    }
-    const thread = parseInt(THREAD);
-    const threadCount = parseInt(THREAD_COUNT);
-    if (threadCount < 1) {
-        throw new Error('THREAD_COUNT must be at least 1');
-    }
-    if (thread < 1 || thread > threadCount) {
-        throw new Error('THREAD must be between 1 and THREAD_COUNT');
-    }
 
     /** @type {{id: string, location: string, country: string, subnet: string, code: string}[]} */
     const pops = JSON.parse(readFileSync(path.join(__dirname, '..', 'pop.json'), 'utf8'));
-
-    const domainLength = DOMAINS.length;
-    const domainSlice = DOMAINS.slice(Math.floor((thread - 1) / threadCount * domainLength), Math.floor(thread / threadCount * domainLength));
     const client = new Route53Client({ region: 'us-west-2' });
 
     for (const pop of pops) {
         /** @type {ReturnType<typeof getChangeObj>[]} */
         const promises = [];
-        for (const domain of domainSlice) {
+        for (const domain of DOMAINS) {
             const code = pop.code.toLowerCase();
             promises.push(getChangeObj(domain, code, 'A', pop.subnet));
             promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet));
