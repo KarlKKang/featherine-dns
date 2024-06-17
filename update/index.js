@@ -37,7 +37,7 @@ let route53ApiRequestListHead = null;
  * @param {string} subnet
  */
 async function dnsLookup(hostname, type, subnet) {
-    const { stdout } = await promiseExecFile('dig', ['@8.8.8.8', hostname, type, '+subnet=' + subnet, '+short']);
+    const { stdout } = await promiseExecFile('dig', ['@ns-1643.awsdns-13.co.uk', hostname, type, '+subnet=' + subnet, '+short']);
     const results = [];
     const lines = stdout.split('\n');
     for (const line of lines) {
