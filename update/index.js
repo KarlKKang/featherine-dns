@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { ChangeResourceRecordSetsCommand, Route53Client } from '@aws-sdk/client-route-53';
 import http from 'node:http';
+import { performance } from 'perf_hooks';
 
 const DOMAINS = [
     'featherine.com',
@@ -21,6 +22,12 @@ const THREAD_COUNT = process.env.THREAD_COUNT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const promiseExecFile = promisify(execFile);
+
+/**
+ * @typedef {{time: number, next: Route53ApiRequestListNode|null}} Route53ApiRequestListNode
+ */
+/** @type {Route53ApiRequestListNode|null} */
+let route53ApiRequestListHead = null;
 
 /**
  * @param {string} hostname
@@ -128,7 +135,41 @@ async function updateDNS(changeBatch, client) {
         ChangeBatch: changeBatch,
         HostedZoneId: HOST_ZONE_ID
     });
-    await client.send(command);
+
+    let periodStartTime = 0;
+    let requestCount = 0;
+    let current = route53ApiRequestListHead;
+    /** @type {Route53ApiRequestListNode|null} */
+    let previous = null;
+
+    while (current !== null) {
+        if (performance.now() - current.time > 1000) {
+            if (previous === null) {
+                route53ApiRequestListHead = current.next;
+            } else {
+                previous.next = current.next;
+            }
+        } else {
+            periodStartTime = current.time;
+            requestCount++;
+            previous = current;
+        }
+        current = current.next;
+    }
+
+    if (requestCount >= 5) {
+        const sleepTime = 1000 - (performance.now() - periodStartTime);
+        if (sleepTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, sleepTime));
+        }
+    }
+
+    try {
+        await client.send(command);
+    } finally {
+        const newRequestNode = { time: performance.now(), next: route53ApiRequestListHead };
+        route53ApiRequestListHead = newRequestNode;
+    }
 }
 
 async function main() {
@@ -155,55 +196,55 @@ async function main() {
 
     const domainLength = DOMAINS.length;
     const domainSlice = DOMAINS.slice(Math.floor((thread - 1) / threadCount * domainLength), Math.floor(thread / threadCount * domainLength));
+    const client = new Route53Client({ region: 'us-west-2' });
 
-    /** @type {ReturnType<typeof getChangeObj>[]} */
-    const promises = [];
-    for (const domain of domainSlice) {
-        for (const pop of pops) {
+    for (const pop of pops) {
+        /** @type {ReturnType<typeof getChangeObj>[]} */
+        const promises = [];
+        for (const domain of domainSlice) {
             const code = pop.code.toLowerCase();
             promises.push(getChangeObj(domain, code, 'A', pop.subnet));
             promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet));
         }
-    }
 
-    /** @type {{Changes: ReturnType<typeof toChangeObj>[]}} */
-    let currentChangeBatch = { Changes: [] };
-    let changeBatches = [currentChangeBatch];
-    let characterCount = 0;
-    let recordCount = 0;
-    let promiseResults = await Promise.allSettled(promises);
-    for (const result of promiseResults) {
-        if (result.status === 'rejected') {
-            console.error(result.reason);
-            continue;
+        /** @type {{Changes: ReturnType<typeof toChangeObj>[]}} */
+        let currentChangeBatch = { Changes: [] };
+        let changeBatches = [currentChangeBatch];
+        let characterCount = 0;
+        let recordCount = 0;
+        let promiseResults = await Promise.allSettled(promises);
+        for (const result of promiseResults) {
+            if (result.status === 'rejected') {
+                console.error(result.reason);
+                continue;
+            }
+            const changeObj = result.value;
+            let currentCharacterCount = 0;
+            for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
+                currentCharacterCount += ip.Value.length;
+            }
+            characterCount += currentCharacterCount;
+            recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
+            if (recordCount > 500 || characterCount > 16000) {
+                currentChangeBatch = { Changes: [] };
+                changeBatches.push(currentChangeBatch);
+                characterCount = currentCharacterCount;
+                recordCount = changeObj.ResourceRecordSet.ResourceRecords.length;
+            }
+            currentChangeBatch.Changes.push(changeObj);
         }
-        const changeObj = result.value;
-        let currentCharacterCount = 0;
-        for (const ip of changeObj.ResourceRecordSet.ResourceRecords) {
-            currentCharacterCount += ip.Value.length;
-        }
-        characterCount += currentCharacterCount;
-        recordCount += changeObj.ResourceRecordSet.ResourceRecords.length;
-        if (recordCount > 500 || characterCount > 16000) {
-            currentChangeBatch = { Changes: [] };
-            changeBatches.push(currentChangeBatch);
-            characterCount = currentCharacterCount;
-            recordCount = changeObj.ResourceRecordSet.ResourceRecords.length;
-        }
-        currentChangeBatch.Changes.push(changeObj);
-    }
 
-    const client = new Route53Client({ region: 'us-west-2' });
-    for (const changeBatch of changeBatches) {
-        let retryCount = 0;
-        while (true) {
-            try {
-                await updateDNS(changeBatch, client);
-                break;
-            } catch (e) {
-                if (retryCount++ >= 3) {
-                    console.error(e);
+        for (const changeBatch of changeBatches) {
+            let retryCount = 0;
+            while (true) {
+                try {
+                    await updateDNS(changeBatch, client);
                     break;
+                } catch (e) {
+                    if (retryCount++ >= 3) {
+                        console.error(e);
+                        break;
+                    }
                 }
             }
         }
