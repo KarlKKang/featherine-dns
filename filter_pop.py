@@ -8,16 +8,18 @@ def main():
     for pop in pops:
         subnet = pop.get("subnet")
         code = pop.get("code")
+        neighbors = pop.get("neighbors")
         if subnet is not None and code is not None:
-            results.append(
-                {
-                    "id": pop["id"],
-                    "location": pop["location"],
-                    "country": pop["country"],
-                    "subnet": subnet,
-                    "code": code,
-                }
-            )
+            result = {
+                "id": pop["id"],
+                "location": pop["location"],
+                "country": pop["country"],
+                "subnet": subnet,
+                "code": code,
+            }
+            if neighbors is not None:
+                result["neighbors"] = neighbors
+            results.append(result)
         elif subnet is not None or code is not None:
             print(f"Warning: {pop['name']} has only subnet or code")
     results.sort(key=lambda x: x["id"])

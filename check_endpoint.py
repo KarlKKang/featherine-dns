@@ -14,6 +14,15 @@ def get_location(hostname):
     return location
 
 
+def check_neighbor(location_lower, neighbors):
+    if neighbors is None:
+        return False
+    for neighbor in neighbors:
+        if location_lower.startswith(neighbor.lower()):
+            return True
+    return False
+
+
 def main():
     domain = sys.argv[1]
     if not domain:
@@ -25,12 +34,16 @@ def main():
 
     for pop in pops:
         code = pop["code"]
-        code_lower = pop["code"].lower()
+        code_lower = code.lower()
         location = get_location(f"{code_lower}.{domain}")
-        if location.lower().startswith(code_lower):
+        location_lower = location.lower()
+        if location_lower.startswith(code_lower):
             print(f"{code} is OK")
         else:
-            print(f"{code} gets unexpected DNS name {location}")
+            if check_neighbor(location_lower, pop.get("neighbors")):
+                print(f"{code} is in {location} which is a neighbor")
+            else:
+                print(f"{code} gets unexpected location {location}")
 
 
 if __name__ == "__main__":

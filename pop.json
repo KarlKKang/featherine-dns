@@ -53,28 +53,40 @@
     "location": "\u30e0\u30f3\u30d0\u30a4",
     "country": "\u30a4\u30f3\u30c9",
     "subnet": "182.73.199.0/24",
-    "code": "BOM"
+    "code": "BOM",
+    "neighbors": [
+      "PNQ"
+    ]
   },
   {
     "id": "apac-in-pune-2",
     "location": "\u30d7\u30cd\u30fc",
     "country": "\u30a4\u30f3\u30c9",
     "subnet": "14.140.42.0/24",
-    "code": "PNQ"
+    "code": "PNQ",
+    "neighbors": [
+      "BOM"
+    ]
   },
   {
     "id": "apac-jp-osaka",
     "location": "\u5927\u962a",
     "country": "\u65e5\u672c",
     "subnet": "210.160.8.0/24",
-    "code": "KIX"
+    "code": "KIX",
+    "neighbors": [
+      "NRT"
+    ]
   },
   {
     "id": "apac-jp-tokyo-2",
     "location": "\u6771\u4eac",
     "country": "\u65e5\u672c",
     "subnet": "1.0.16.0/24",
-    "code": "NRT"
+    "code": "NRT",
+    "neighbors": [
+      "KIX"
+    ]
   },
   {
     "id": "apac-kr-seoul-2",

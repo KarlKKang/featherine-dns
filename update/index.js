@@ -95,12 +95,29 @@ function toChangeObj(hostname, type, ipList) {
 }
 
 /**
+ * @param {string} locationLower
+ * @param {string[]|undefined} neighbors
+ */
+function checkNeighbor(locationLower, neighbors) {
+    if (neighbors === undefined) {
+        return false;
+    }
+    for (const neighbor of neighbors) {
+        if (locationLower.startsWith(neighbor.toLowerCase())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * @param {string} domain
  * @param {string} code
  * @param {'A'|'AAAA'} type
  * @param {string} subnet
+ * @param {string[]|undefined} neighbors
  */
-async function getChangeObj(domain, code, type, subnet) {
+async function getChangeObj(domain, code, type, subnet, neighbors) {
     /** @type {Awaited<ReturnType<dnsLookup>>} */
     let ipResults;
     let retryCount = 0;
@@ -116,8 +133,12 @@ async function getChangeObj(domain, code, type, subnet) {
                 }
             }
         }
-        const location = await ipLocation(ipResults[0]);
-        if (location.toLowerCase().startsWith(code)) {
+        const location = (await ipLocation(ipResults[0])).toLowerCase();
+        if (location.startsWith(code)) {
+            break;
+        }
+        if (checkNeighbor(location, neighbors)) {
+            console.log(`Neighbor location for ${domain} in ${code}: ${location}`);
             break;
         }
         if (retryCount++ >= 5) {
@@ -178,7 +199,7 @@ async function main() {
     console.log('Starting DNS update');
 
     route53ApiRequestListHead = null;
-    /** @type {{id: string, location: string, country: string, subnet: string, code: string}[]} */
+    /** @type {{id: string, location: string, country: string, subnet: string, code: string, neighbors: string[]|undefined}[]} */
     const pops = JSON.parse(readFileSync(path.join(__dirname, '..', 'pop.json'), 'utf8'));
 
     for (const pop of pops) {
@@ -186,8 +207,8 @@ async function main() {
         const promises = [];
         for (const domain of DOMAINS) {
             const code = pop.code.toLowerCase();
-            promises.push(getChangeObj(domain, code, 'A', pop.subnet));
-            promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet));
+            promises.push(getChangeObj(domain, code, 'A', pop.subnet, pop.neighbors));
+            promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet, pop.neighbors));
         }
 
         /** @type {{Changes: ReturnType<typeof toChangeObj>[]}} */

@@ -50,6 +50,9 @@ def main():
         if existing_pop is not None:
             pop["subnet"] = existing_pop["subnet"]
             pop["code"] = existing_pop["code"]
+            existing_pop_neighbors = existing_pop.get("neighbors")
+            if existing_pop_neighbors is not None:
+                pop["neighbors"] = existing_pop_neighbors
     with open("pop_all.json", "w") as f:
         json.dump(pops, f, indent=2)
 

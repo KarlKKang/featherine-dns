@@ -31,6 +31,15 @@ def dns_lookup(domain, subnet):
     return None
 
 
+def check_neighbor(dns_name, dns_name_prefix_ip, neighbors):
+    if neighbors is None:
+        return False
+    for neighbor in neighbors:
+        if dns_name.startswith(dns_name_prefix_ip + neighbor.lower()):
+            return True
+    return False
+
+
 def main():
     domain = sys.argv[1]
     if not domain:
@@ -47,11 +56,15 @@ def main():
         if ip is None:
             print(f"Cannot find IP address for {code}")
         dns_name = inverse_lookup(ip)
-        dns_name_prefix = "server-" + ip.replace(".", "-") + "." + code.lower()
+        dns_name_prefix_ip = "server-" + ip.replace(".", "-") + "."
+        dns_name_prefix = dns_name_prefix_ip + code.lower()
         if dns_name.startswith(dns_name_prefix):
             print(f"{code} is OK")
         else:
-            print(f"{code} gets unexpected DNS name {dns_name}")
+            if check_neighbor(dns_name, dns_name_prefix_ip, pop.get("neighbors")):
+                print(f"{code} gets DNS name {dns_name} which is a neighbor")
+            else:
+                print(f"{code} gets unexpected DNS name {dns_name}")
 
 
 if __name__ == "__main__":
