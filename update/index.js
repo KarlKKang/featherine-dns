@@ -25,6 +25,9 @@ const __dirname = path.dirname(__filename);
 const promiseExecFile = promisify(execFile);
 const route53Client = new Route53Client({ region: 'us-west-2' });
 
+/** @type {any} */
+let jobID;
+
 /**
  * @typedef {{time: number, next: Route53ApiRequestListNode|null}} Route53ApiRequestListNode
  */
@@ -198,11 +201,18 @@ async function main() {
     const startTime = performance.now();
     console.log('Starting DNS update');
 
+    const currentJobID = {};
+    jobID = currentJobID;
     route53ApiRequestListHead = null;
     /** @type {{id: string, location: string, country: string, subnet: string, code: string, neighbors: string[]|undefined}[]} */
     const pops = JSON.parse(readFileSync(path.join(__dirname, '..', 'pop.json'), 'utf8'));
 
     for (const pop of pops) {
+        if (jobID !== currentJobID) {
+            console.warn('DNS update aborted');
+            return;
+        }
+
         /** @type {ReturnType<typeof getChangeObj>[]} */
         const promises = [];
         for (const domain of DOMAINS) {
@@ -241,6 +251,10 @@ async function main() {
         for (const changeBatch of changeBatches) {
             let retryCount = 0;
             while (true) {
+                if (jobID !== currentJobID) {
+                    console.warn('DNS update aborted');
+                    return;
+                }
                 try {
                     await updateDNS(changeBatch);
                     break;
