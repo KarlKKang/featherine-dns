@@ -106,8 +106,11 @@
     "id": "apac-ph-manila",
     "location": "\u30de\u30f3\u30ea\u30a2",
     "country": "\u30d5\u30a3\u30ea\u30d4\u30f3",
-    "subnet": "112.199.112.0/24",
-    "code": "MNL"
+    "subnet": "202.57.52.0/24",
+    "code": "MNL",
+    "neighbors": [
+      "HKG"
+    ]
   },
   {
     "id": "apac-sg-singapore",
