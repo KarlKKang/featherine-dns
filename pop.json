@@ -135,6 +135,9 @@
     "location": "\u30cf\u30ce\u30a4",
     "country": "\u30d9\u30c8\u30ca\u30e0",
     "subnet": "123.31.42.0/24",
-    "code": "HAN"
+    "code": "HAN",
+    "neighbors": [
+      "HKG"
+    ]
   }
 ]
