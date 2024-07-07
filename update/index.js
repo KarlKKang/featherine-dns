@@ -3,27 +3,12 @@ import { promisify } from 'util';
 import ipaddr from 'ipaddr.js';
 import { readFileSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { ChangeResourceRecordSetsCommand, Route53Client } from '@aws-sdk/client-route-53';
+import { ChangeResourceRecordSetsCommand } from '@aws-sdk/client-route-53';
 import http from 'node:http';
 import { performance } from 'perf_hooks';
+import { HOST_ZONE_ID, DOMAINS, __dirname, route53Client } from './util.js';
 
-const DOMAINS = [
-    'featherine.com',
-    'alpha.featherine.com',
-    'server.featherine.com',
-    'server.alpha.featherine.com',
-    'cdn.featherine.com',
-    'cdn.alpha.featherine.com',
-];
-const HOST_ZONE_ID = process.env.HOST_ZONE_ID;
-if (HOST_ZONE_ID === undefined) {
-    throw new Error('HOST_ZONE_ID is not defined');
-}
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const promiseExecFile = promisify(execFile);
-const route53Client = new Route53Client({ region: 'us-west-2' });
 
 /** @type {any} */
 let jobID;
