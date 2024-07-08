@@ -52,7 +52,7 @@ function filterRecords(records) {
     const hostnamesToDelete = [];
     for (const pop of pops) {
         for (const domain of DOMAINS) {
-            hostnamesToDelete.push(`${pop.code}.${domain}`);
+            hostnamesToDelete.push(`${pop.code.toLowerCase()}.${domain}`);
         }
     }
     /** @type {{Changes: {Action: 'DELETE', ResourceRecordSet: typeof records[0]}[]}} */
