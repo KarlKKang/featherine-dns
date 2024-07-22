@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Environment="HOST_ZONE_ID="
+Environment="NO_IPV6=1"
 ExecStart=/usr/bin/node-20 /home/ec2-user/featherine-dns/update/index.js
 
 [Install]

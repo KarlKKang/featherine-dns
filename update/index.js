@@ -8,6 +8,7 @@ import http from 'node:http';
 import { performance } from 'perf_hooks';
 import { HOST_ZONE_ID, DOMAINS, __dirname, route53Client } from './util.js';
 
+const NO_IPV6 = process.env.NO_IPV6 === '1';
 const promiseExecFile = promisify(execFile);
 
 /** @type {any} */
@@ -203,7 +204,9 @@ async function main() {
         for (const domain of DOMAINS) {
             const code = pop.code.toLowerCase();
             promises.push(getChangeObj(domain, code, 'A', pop.subnet, pop.neighbors));
-            promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet, pop.neighbors));
+            if (!NO_IPV6) {
+                promises.push(getChangeObj(domain, code, 'AAAA', pop.subnet, pop.neighbors));
+            }
         }
 
         /** @type {{Changes: ReturnType<typeof toChangeObj>[]}} */
